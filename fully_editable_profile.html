@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editable Profile</title>
+<style>
+:root{--ink:#433957;--muted:#81768f;--lav:#e9defb;--pink:#fbe5ee;--paper:#fff;--bg:#faf7ff;--accent:#9275c4;--danger:#b34c68}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#faf7ff,#fff8fb);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
+button,input,textarea,select{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:9px 13px;background:var(--lav);color:var(--ink);font-weight:600}button:hover{filter:brightness(.97)}button:disabled{opacity:.45;cursor:not-allowed}
+.danger{background:#ffe4eb;color:var(--danger)}.primary{background:var(--accent);color:white}.ghost{background:#f5effc}.small{padding:6px 9px;font-size:12px}
+.toolbar{position:sticky;top:0;z-index:5;background:#ffffffed;backdrop-filter:blur(12px);border-bottom:1px solid #eee6f7;padding:12px 18px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.wrap{max-width:1050px;margin:28px auto;padding:0 18px 40px}.profile{background:white;border:1px solid #efe8f7;border-radius:24px;overflow:hidden;box-shadow:0 12px 40px #5c47700b}
+.cover{height:190px;background:linear-gradient(120deg,#e8ddfa,#f9e4ee);position:relative;background-size:cover;background-position:center}.cover .cover-controls{position:absolute;right:14px;top:14px}
+.header{display:flex;gap:20px;padding:0 28px 26px;align-items:flex-end;flex-wrap:wrap}.avatar{width:118px;height:118px;border-radius:50%;border:5px solid white;background:#f0e7fb;object-fit:cover;margin-top:-55px;z-index:1}.headcopy{flex:1;min-width:230px;padding-top:14px}.headcopy h1{margin:0;font-size:clamp(25px,4vw,36px)}.username{color:var(--muted);margin:4px 0}.bio{margin:9px 0;color:#655b75}.meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}.section{background:white;border:1px solid #efe8f7;border-radius:20px;padding:22px;margin-top:18px}.sectionhead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}.sectionhead h2{margin:0;color:#725c99;font-size:20px}.sectiondesc{color:var(--muted);margin:6px 0 0}.edittools{display:flex;gap:6px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.itemcard{border:1px solid #f0e8f8;background:#fcfaff;border-radius:14px;padding:14px;min-width:0}.itemcard h3{font-size:15px;margin:0 0 8px}.itemcard p{margin:5px 0;color:#6c617c;white-space:pre-wrap;overflow-wrap:anywhere}.tags{display:flex;gap:8px;flex-wrap:wrap}.tag{display:inline-flex;align-items:center;gap:6px;background:#f2eafa;color:#665283;border-radius:999px;padding:8px 12px;font-size:14px}.tag .actions{display:flex;gap:3px}.skill-category{border:1px solid #eee5f8;background:#fdfbff;padding:14px;border-radius:14px;margin:12px 0}.skill-category h3{margin:0 0 12px;color:#8a70b5;font-size:14px}.projectimg{width:100%;height:150px;object-fit:cover;border-radius:10px;background:#eee7f6;margin-bottom:10px}.fieldgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:5px}.field label{font-size:12px;color:var(--muted);font-weight:700}.field input,.field textarea,.field select{width:100%;border:1px solid #e6dced;border-radius:9px;padding:9px;background:white;color:var(--ink)}textarea{resize:vertical;min-height:70px}.inlineactions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.settingrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f1eaf7}.settingrow:last-child{border-bottom:0}.notice{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#493d5c;color:white;padding:12px 18px;border-radius:12px;display:none;z-index:10;box-shadow:0 6px 24px #0002}.hidden{display:none!important}.editing-note{font-size:13px;color:#8b70b3;text-align:center;margin:10px}.empty{color:#988da6;font-size:14px;padding:12px 0}
+@media(max-width:600px){.header{padding:0 18px 20px}.cover{height:150px}.section{padding:16px}.toolbar{padding:10px}.avatar{width:92px;height:92px}}
+</style>
+</head>
+<body>
+<div class="toolbar">
+<button class="primary" id="editToggle">✎ Edit Profile</button>
+<button id="saveBtn" class="primary hidden">Save Changes</button>
+<button id="cancelBtn" class="danger hidden">Cancel</button>
+<button id="resetBtn" class="ghost">Reset Demo</button>
+</div>
+<div class="editing-note" id="editingNote">View mode · Click “Edit Profile” to customize all sections.</div>
+<div class="wrap"><main class="profile">
+<div class="cover" id="cover"></div>
+<header class="header">
+<img class="avatar" id="avatar" alt="Profile picture">
+<div class="headcopy">
+<h1 id="fullName"></h1><div class="username" id="username"></div><p class="bio" id="bio"></p><div class="meta" id="headerMeta"></div>
+</div>
+<div id="headerTools" class="edittools"></div>
+</header>
+</main><div id="sections"></div></div>
+<div class="notice" id="notice"></div>
+<script>
+const STORAGE_KEY="completeEditableProfile_v1";
+const demo={
+header:{fullName:"Saanvi Prasad",username:"@saanvi.prasad",bio:"B.Sc. Data Science & Mathematics student, curious about data, technology, and building useful things.",email:"saanvi@example.com",location:"Bengaluru, India",joinDate:"June 2025",avatar:"",cover:""},
+about:{heading:"About Me",description:"A little about who I am and what I enjoy.",intro:"I enjoy exploring data, solving problems, and learning how technology can make everyday work better.",interests:["Data Science","Technology","Problem Solving"],hobbies:["Reading","Designing","Learning new tools"],education:[{title:"B.Sc. Data Science & Mathematics",description:"CHRIST (Deemed to be University) · 2025–Present"}],personalSkills:["Communication","Teamwork","Adaptability"]},
+skills:{heading:"Technical Skills",description:"A simple list of technologies and skills I am learning.",categories:[{name:"Programming Languages",items:[{name:"Python",description:""},{name:"Java",description:""},{name:"SQL",description:""}]},{name:"Web Development",items:[{name:"HTML",description:""},{name:"CSS",description:""},{name:"JavaScript",description:""}]},{name:"Data & Mathematics",items:[{name:"Data Analysis",description:""},{name:"Data Cleaning",description:""},{name:"Statistical Analysis",description:""}]}]},
+projects:{heading:"Portfolio / Projects",description:"Selected work and practice projects.",items:[{title:"Courier / Parcel Tracking System",description:"A data-focused project to organize parcel records, delivery status, and summary insights.",date:"2026",technologies:["Python","SQL"],github:"",url:"",image:""},{title:"Data Analysis Project",description:"Exploring a dataset and presenting useful insights with charts.",date:"2026",technologies:["Excel","Python"],github:"",url:"",image:""}]},
+personal:{heading:"Personal Information",description:"Contact and other personal details.",fields:[{label:"Phone number",value:""},{label:"Date of birth",value:""},{label:"Gender",value:""},{label:"Email address",value:"saanvi@example.com"},{label:"Location",value:"Bengaluru, India"}]},
+social:{heading:"Social Links",description:"Connect with me online.",items:[{platform:"LinkedIn",url:""},{platform:"GitHub",url:""},{platform:"Instagram",url:""}]},
+settings:{heading:"Account Settings",description:"Local demo preferences.",items:[{label:"Email notifications",type:"toggle",value:true},{label:"Profile visibility",type:"select",value:"Public",options:["Public","Private","Connections only"]},{label:"Show contact details on profile",type:"toggle",value:false},{label:"Compact layout",type:"toggle",value:false}]},
+layout:["about","skills","projects","personal","social","settings"]
+};
+let saved=loadData(),draft=null,editing=false;
+function loadData(){try{let d=localStorage.getItem(STORAGE_KEY);return d?JSON.parse(d):structuredClone(demo)}catch(e){return JSON.parse(JSON.stringify(demo))}}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function current(){return editing?draft:saved}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function notify(msg){let n=document.getElementById("notice");n.textContent=msg;n.style.display="block";setTimeout(()=>n.style.display="none",2200)}
+function askDelete(msg){return confirm(msg+"\n\nThis action cannot be undone after Save Changes.")}
+function promptText(label,value=""){let x=prompt(label,value);return x===null?null:x.trim()}
+function field(label,name,value,type="text"){return `<div class="field"><label>${esc(label)}</label><input name="${esc(name)}" type="${type}" value="${esc(value)}"></div>`}
+function textareaField(label,name,value){return `<div class="field"><label>${esc(label)}</label><textarea name="${esc(name)}">${esc(value)}</textarea></div>`}
+function formModal(title,fields,callback){let modal=document.createElement("dialog");modal.style.cssText="border:1px solid #eadff5;border-radius:16px;padding:22px;width:min(600px,92vw);color:#433957";modal.innerHTML=`<form method="dialog" id="modalForm"><h2 style="margin-top:0">${esc(title)}</h2><div class="fieldgrid">${fields}</div><div class="inlineactions"><button class="primary" type="submit">Save</button><button type="button" id="modalCancel">Cancel</button></div></form>`;document.body.appendChild(modal);modal.showModal();modal.querySelector("#modalCancel").onclick=()=>modal.close();modal.querySelector("form").onsubmit=e=>{e.preventDefault();let fd=new FormData(e.target),obj=Object.fromEntries(fd.entries());callback(obj);modal.close();modal.remove()};modal.addEventListener("close",()=>modal.remove())}
+function uploadImage(currentValue,callback){let input=document.createElement("input");input.type="file";input.accept="image/*";input.onchange=()=>{let file=input.files[0];if(!file)return;let reader=new FileReader();reader.onload=()=>callback(reader.result);reader.readAsDataURL(file)};input.click()}
+function actions(html){return editing?`<div class="edittools">${html}</div>`:""}
+function render(){
+ const d=current(),h=d.header;
+ document.getElementById("cover").style.backgroundImage=h.cover?`url("${h.cover}")`:"linear-gradient(120deg,#e8ddfa,#f9e4ee)";
+ document.getElementById("avatar").src=h.avatar||"data:image/svg+xml,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="100%" height="100%" fill="#e9defb"/><text x="50%" y="55%" font-size="42" text-anchor="middle" fill="#9275c4">✿</text></svg>`);
+ document.getElementById("fullName").textContent=h.fullName;document.getElementById("username").textContent=h.username;document.getElementById("bio").textContent=h.bio;
+ document.getElementById("headerMeta").innerHTML=[h.email,h.location,h.joinDate].filter(Boolean).map(x=>`<span>• ${esc(x)}</span>`).join("");
+ document.getElementById("headerTools").innerHTML=actions(`<button class="small" data-action="editHeader">Edit details</button><button class="small" data-action="avatar">Profile image</button><button class="small" data-action="removeAvatar">Remove profile image</button><button class="small" data-action="cover">Cover image</button><button class="small" data-action="removeCover">Remove cover</button>`);
+ const sections=document.getElementById("sections");sections.innerHTML="";
+ d.layout.forEach((key,index)=>{if(!d[key])return;let node=document.createElement("section");node.className="section";node.dataset.section=key;node.innerHTML=renderSection(key,d[key],index);sections.appendChild(node)});
+ if(editing){let add=document.createElement("section");add.className="section";add.innerHTML=`<div class="sectionhead"><h2>Add or manage sections</h2></div><div class="inlineactions"><button data-action="addSection">＋ Add section</button></div>`;sections.appendChild(add)}
+}
+function sectionHead(key,obj,index){return `<div class="sectionhead"><div><h2>${esc(obj.heading)}</h2><p class="sectiondesc">${esc(obj.description||"")}</p></div>${actions(`<button class="small" data-action="editSection" data-key="${key}">Edit heading/description</button><button class="small" data-action="moveSectionUp" data-key="${key}" ${index===0?"disabled":""}>↑</button><button class="small" data-action="moveSectionDown" data-key="${key}">↓</button><button class="small danger" data-action="deleteSection" data-key="${key}">Delete section</button>`)}</div>`}
+function renderSection(key,obj,index){
+ let out=sectionHead(key,obj,index);
+ if(key==="about"){
+ out+=`<p>${esc(obj.intro)}</p>`;
+ [["Interests",obj.interests,"interests"],["Hobbies",obj.hobbies,"hobbies"],["Personal Skills",obj.personalSkills,"personalSkills"]].forEach(([title,arr,sub])=>{out+=`<h3>${title}</h3><div class="tags">${arr.map((v,i)=>`<span class="tag">${esc(v)} ${editing?`<span class="actions"><button class="small" data-action="editAboutList" data-sub="${sub}" data-i="${i}">✎</button><button class="small danger" data-action="delAboutList" data-sub="${sub}" data-i="${i}">×</button></span>`:""}</span>`).join("")||'<span class="empty">Nothing added yet.</span>'}</div>${editing?`<button class="small" data-action="addAboutList" data-sub="${sub}">＋ Add ${title.toLowerCase()}</button>`:""}`});
+ out+=`<h3>Education</h3><div class="grid">${obj.education.map((ed,i)=>`<div class="itemcard"><h3>${esc(ed.title)}</h3><p>${esc(ed.description)}</p>${actions(`<button class="small" data-action="editEducation" data-i="${i}">Edit</button><button class="small danger" data-action="delEducation" data-i="${i}">Delete</button>`)}</div>`).join("")||'<p class="empty">No education entries.</p>'}</div>${editing?`<button class="small" data-action="addEducation">＋ Add education</button>`:""}`;
+ }
+ if(key==="skills"){
+ out+=obj.categories.map((cat,ci)=>`<div class="skill-category"><div class="sectionhead"><h3>${esc(cat.name)}</h3>${actions(`<button class="small" data-action="editSkillCat" data-ci="${ci}">Edit category</button><button class="small danger" data-action="delSkillCat" data-ci="${ci}">Delete category</button><button class="small" data-action="addSkillInCat" data-ci="${ci}">＋ Add skill</button><button class="small" data-action="catUp" data-ci="${ci}">↑</button><button class="small" data-action="catDown" data-ci="${ci}">↓</button>`)}</div><div class="tags">${cat.items.map((sk,si)=>`<span class="tag">${esc(sk.name)}${editing?` <span class="actions"><button class="small" data-action="editSkill" data-ci="${ci}" data-si="${si}">✎</button><button class="small danger" title="Delete skill" data-action="delSkill" data-ci="${ci}" data-si="${si}">🗑</button><button class="small" data-action="skillUp" data-ci="${ci}" data-si="${si}">↑</button><button class="small" data-action="skillDown" data-ci="${ci}" data-si="${si}">↓</button></span>`:""}</span>`).join("")||'<span class="empty">No skills in this category.</span>'}</div></div>`).join("")+ (editing?`<button data-action="addSkill">＋ Add Skill</button> <button data-action="addSkillCategory">＋ Add Category</button>`:"");
+ }
+ if(key==="projects"){
+ out+=`<div class="grid">${obj.items.map((p,i)=>`<article class="itemcard">${p.image?`<img class="projectimg" src="${esc(p.image)}" alt="${esc(p.title)}">`:""}<h3>${esc(p.title)}</h3><p>${esc(p.description)}</p><p>${esc(p.date)}</p><div class="tags">${(p.technologies||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>${p.github?`<p><a href="${esc(p.github)}" target="_blank" rel="noopener">GitHub</a></p>`:""}${p.url?`<p><a href="${esc(p.url)}" target="_blank" rel="noopener">Project link</a></p>`:""}${actions(`<button class="small" data-action="editProject" data-i="${i}">Edit</button><button class="small" data-action="projectImage" data-i="${i}">Image</button><button class="small danger" data-action="removeProjectImage" data-i="${i}">Remove image</button><button class="small danger" data-action="delProject" data-i="${i}">Delete</button><button class="small" data-action="projectUp" data-i="${i}">↑</button><button class="small" data-action="projectDown" data-i="${i}">↓</button>`)}</article>`).join("")||'<p class="empty">No projects added yet.</p>'}</div>${editing?`<button data-action="addProject">＋ Add project</button>`:""}`;
+ }
+ if(key==="personal"){
+ out+=`<div class="grid">${obj.fields.map((f,i)=>`<div class="itemcard"><h3>${esc(f.label)}</h3><p>${esc(f.value||"—")}</p>${actions(`<button class="small" data-action="editPersonal" data-i="${i}">Edit</button><button class="small danger" data-action="delPersonal" data-i="${i}">Delete</button>`)}</div>`).join("")||'<p class="empty">No personal fields.</p>'}</div>${editing?`<button data-action="addPersonal">＋ Add field</button>`:""}`;
+ }
+ if(key==="social"){
+ out+=`<div class="grid">${obj.items.map((s,i)=>`<div class="itemcard"><h3>${esc(s.platform)}</h3><p>${s.url?`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a>`:"No URL added"}</p>${actions(`<button class="small" data-action="editSocial" data-i="${i}">Edit</button><button class="small danger" data-action="delSocial" data-i="${i}">Delete</button>`)}</div>`).join("")||'<p class="empty">No social links added.</p>'}</div>${editing?`<button data-action="addSocial">＋ Add social link</button>`:""}`;
+ }
+ if(key==="settings"){
+ out+=obj.items.map((s,i)=>`<div class="settingrow"><strong>${esc(s.label)}</strong>${editing?(s.type==="toggle"?`<input type="checkbox" data-action="settingToggle" data-i="${i}" ${s.value?"checked":""}>`:`<select data-action="settingSelect" data-i="${i}">${s.options.map(o=>`<option ${o===s.value?"selected":""}>${esc(o)}</option>`).join("")}</select>`) : `<span>${esc(String(s.value))}</span>`}${actions(`<button class="small" data-action="editSetting" data-i="${i}">Edit</button><button class="small danger" data-action="delSetting" data-i="${i}">Delete</button>`)}</div>`).join("")+ (editing?`<button data-action="addSetting">＋ Add setting</button>`:"");
+ }
+ return out;
+}
+function editHeader(){let h=draft.header;formModal("Edit profile header",field("Full name","fullName",h.fullName)+field("Username","username",h.username)+textareaField("Bio","bio",h.bio)+field("Email","email",h.email,"email")+field("Location","location",h.location)+field("Join date","joinDate",h.joinDate),v=>{Object.assign(draft.header,v);render()})}
+function addSection(){let available=["about","skills","projects","personal","social","settings"].filter(k=>!draft.layout.includes(k));let custom=promptText("Enter section key to add ("+available.join(", ")+") or custom section name:");if(!custom)return;let key=custom.toLowerCase();if(available.includes(key)){draft.layout.push(key)}else{key="custom_"+Date.now();draft[key]={heading:custom,description:"",content:"",items:[]};draft.layout.push(key)}render()}
+function handleAction(action,el){
+ let d=draft, i=Number(el.dataset.i),ci=Number(el.dataset.ci),si=Number(el.dataset.si),key=el.dataset.key,sub=el.dataset.sub;
+ switch(action){
+ case"editHeader":return editHeader();
+ case"avatar":return uploadImage(d.header.avatar,v=>{d.header.avatar=v;render()});
+ case"removeAvatar":if(askDelete("Remove profile picture?")){d.header.avatar="";render()}return;
+ case"cover":return uploadImage(d.header.cover,v=>{d.header.cover=v;render()});
+ case"removeCover":if(askDelete("Remove cover image?")){d.header.cover="";render()}return;
+ case"editSection":return formModal("Edit section",field("Heading","heading",d[key].heading)+textareaField("Description","description",d[key].description||""),v=>{Object.assign(d[key],v);render()});
+ case"deleteSection":if(askDelete("Delete this section?")){d.layout=d.layout.filter(x=>x!==key);delete d[key];render()}return;
+ case"moveSectionUp":{let n=d.layout.indexOf(key);if(n>0){[d.layout[n-1],d.layout[n]]=[d.layout[n],d.layout[n-1]];render()}return}
+ case"moveSectionDown":{let n=d.layout.indexOf(key);if(n<d.layout.length-1){[d.layout[n+1],d.layout[n]]=[d.layout[n],d.layout[n+1]];render()}return}
+ case"addSection":return addSection();
+ case"editAboutList":{let val=promptText("Edit item:",d.about[sub][i]);if(val!==null&&val){d.about[sub][i]=val;render()}return}
+ case"delAboutList":if(askDelete("Delete this item?")){d.about[sub].splice(i,1);render()}return;
+ case"addAboutList":{let val=promptText("Add item:");if(val)d.about[sub].push(val);render();return}
+ case"editEducation":return formModal("Edit education",field("Title","title",d.about.education[i].title)+textareaField("Details","description",d.about.education[i].description),v=>{Object.assign(d.about.education[i],v);render()});
+ case"delEducation":if(askDelete("Delete education entry?")){d.about.education.splice(i,1);render()}return;
+ case"addEducation":return formModal("Add education",field("Title","title","")+textareaField("Details","description",""),v=>{d.about.education.push(v);render()});
+ case"addSkillCategory":{let val=promptText("New category name:");if(val)d.skills.categories.push({name:val,items:[]});render();return}
+ case"editSkillCat":{let val=promptText("Edit category name:",d.skills.categories[ci].name);if(val)d.skills.categories[ci].name=val;render();return}
+ case"delSkillCat":if(askDelete("Delete category and all its skills?")){d.skills.categories.splice(ci,1);render()}return;
+ case"addSkillInCat":return formModal("Add skill",field("Skill name","name","")+textareaField("Description (optional)","description",""),v=>{if(v.name.trim())d.skills.categories[ci].items.push({name:v.name,description:v.description});render()});
+ case"addSkill":{let cats=d.skills.categories;if(!cats.length){alert("Add a category first.");return}let choices=cats.map((c,n)=>`${n}: ${c.name}`).join("\n");let pick=prompt("Choose category index:\n"+choices,"0");if(pick===null)return;let idx=Number(pick);if(!Number.isInteger(idx)||idx<0||idx>=cats.length){alert("Invalid category.");return}return handleAction("addSkillInCat",{dataset:{ci:String(idx)}})}
+ case"editSkill":return formModal("Edit skill",field("Skill name","name",d.skills.categories[ci].items[si].name)+textareaField("Description","description",d.skills.categories[ci].items[si].description||""),v=>{Object.assign(d.skills.categories[ci].items[si],v);render()});
+ case"delSkill":if(askDelete("Delete skill “"+d.skills.categories[ci].items[si].name+"”?")){d.skills.categories[ci].items.splice(si,1);render()}return;
+ case"skillUp":if(si>0){let a=d.skills.categories[ci].items;[a[si-1],a[si]]=[a[si],a[si-1]];render()}return;
+ case"skillDown":{let a=d.skills.categories[ci].items;if(si<a.length-1){[a[si+1],a[si]]=[a[si],a[si+1]];render()}return}
+ case"catUp":if(ci>0){let a=d.skills.categories;[a[ci-1],a[ci]]=[a[ci],a[ci-1]];render()}return;
+ case"catDown":{let a=d.skills.categories;if(ci<a.length-1){[a[ci+1],a[ci]]=[a[ci],a[ci+1]];render()}return}
+ case"addProject":return projectForm();
+ case"editProject":return projectForm(i);
+ case"delProject":if(askDelete("Delete this project?")){d.projects.items.splice(i,1);render()}return;
+ case"projectUp":if(i>0){let a=d.projects.items;[a[i-1],a[i]]=[a[i],a[i-1]];render()}return;
+ case"projectDown":{let a=d.projects.items;if(i<a.length-1){[a[i+1],a[i]]=[a[i],a[i+1]];render()}return}
+ case"projectImage":return uploadImage(d.projects.items[i].image,v=>{d.projects.items[i].image=v;render()});
+ case"removeProjectImage":if(askDelete("Remove project image?")){d.projects.items[i].image="";render()}return;
+ case"addPersonal":return formModal("Add personal field",field("Field label","label","")+field("Value","value",""),v=>{d.personal.fields.push(v);render()});
+ case"editPersonal":return formModal("Edit personal field",field("Field label","label",d.personal.fields[i].label)+field("Value","value",d.personal.fields[i].value),v=>{Object.assign(d.personal.fields[i],v);render()});
+ case"delPersonal":if(askDelete("Delete this personal information field?")){d.personal.fields.splice(i,1);render()}return;
+ case"addSocial":return formModal("Add social link",field("Platform","platform","")+field("URL","url","","url"),v=>{d.social.items.push(v);render()});
+ case"editSocial":return formModal("Edit social link",field("Platform","platform",d.social.items[i].platform)+field("URL","url",d.social.items[i].url,"url"),v=>{Object.assign(d.social.items[i],v);render()});
+ case"delSocial":if(askDelete("Delete this social link?")){d.social.items.splice(i,1);render()}return;
+ case"addSetting":return formModal("Add setting",field("Setting label","label","")+`<div class="field"><label>Type</label><select name="type"><option value="toggle">Toggle</option><option value="select">Dropdown</option></select></div>`+field("Value","value","true"),v=>{let item={label:v.label,type:v.type,value:v.type==="toggle"?v.value==="true":v.value,options:["On","Off"]};d.settings.items.push(item);render()});
+ case"editSetting":return formModal("Edit setting",field("Setting label","label",d.settings.items[i].label)+field("Value","value",String(d.settings.items[i].value)),v=>{d.settings.items[i].label=v.label;d.settings.items[i].value=v.value;render()});
+ case"delSetting":if(askDelete("Delete this setting?")){d.settings.items.splice(i,1);render()}return;
+ }
+}
+function projectForm(i=null){let p=i===null?{title:"",description:"",date:"",technologies:[],github:"",url:"",image:""}:draft.projects.items[i];formModal(i===null?"Add project":"Edit project",field("Title","title",p.title)+textareaField("Description","description",p.description)+field("Date","date",p.date)+field("Technologies (comma separated)","technologies",(p.technologies||[]).join(", "))+field("GitHub URL","github",p.github,"url")+field("Project URL","url",p.url,"url"),v=>{v.technologies=v.technologies.split(",").map(x=>x.trim()).filter(Boolean);v.image=p.image||"";if(i===null)draft.projects.items.push(v);else Object.assign(draft.projects.items[i],v);render()})}
+document.addEventListener("click",e=>{let el=e.target.closest("[data-action]");if(!el||!editing)return;let action=el.dataset.action;if(action==="settingToggle"){draft.settings.items[Number(el.dataset.i)].value=el.checked;return}if(action==="settingSelect"){draft.settings.items[Number(el.dataset.i)].value=el.value;return}handleAction(action,el)});
+document.getElementById("editToggle").onclick=()=>{editing=true;draft=clone(saved);document.getElementById("editToggle").classList.add("hidden");document.getElementById("saveBtn").classList.remove("hidden");document.getElementById("cancelBtn").classList.remove("hidden");document.getElementById("editingNote").textContent="Edit mode · changes are a draft until you click Save Changes.";render()};
+document.getElementById("saveBtn").onclick=()=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(draft));saved=clone(draft);draft=null;editing=false;document.getElementById("editToggle").classList.remove("hidden");document.getElementById("saveBtn").classList.add("hidden");document.getElementById("cancelBtn").classList.add("hidden");document.getElementById("editingNote").textContent="View mode · Click “Edit Profile” to customize all sections.";render();notify("Changes saved successfully!")}catch(err){alert("Could not save. Images may be too large for browser storage. Try smaller images or clear browser storage.")}};
+document.getElementById("cancelBtn").onclick=()=>{if(confirm("Discard all unsaved changes?")){draft=null;editing=false;document.getElementById("editToggle").classList.remove("hidden");document.getElementById("saveBtn").classList.add("hidden");document.getElementById("cancelBtn").classList.add("hidden");document.getElementById("editingNote").textContent="View mode · Click “Edit Profile” to customize all sections.";render();notify("Unsaved changes discarded.")}};
+document.getElementById("resetBtn").onclick=()=>{if(confirm("Reset profile to the demo content? This will overwrite saved changes.")){saved=clone(demo);draft=null;editing=false;localStorage.removeItem(STORAGE_KEY);document.getElementById("editToggle").classList.remove("hidden");document.getElementById("saveBtn").classList.add("hidden");document.getElementById("cancelBtn").classList.add("hidden");render();notify("Demo profile reset.")}};
+render();
+</script>
+</body>
+</html>
